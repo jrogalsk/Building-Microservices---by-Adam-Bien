@@ -8,13 +8,18 @@ public class CompletableFuturesJoinedIntoPipeline {
 
     @Test
     public void pipeline() {
-        CompletableFuture.supplyAsync(this::message)
+        CompletableFuture.supplyAsync(this::message).
+                thenApply(this::beautify)
                 .thenAccept(this::consumeMessage)
                 .thenRun(this::finalAction);
     }
 
     String message() {
         return "hey duke: " + System.currentTimeMillis();
+    }
+
+    String beautify(String input) {
+        return "+ " + input + " +";
     }
 
     void consumeMessage(String message) {
