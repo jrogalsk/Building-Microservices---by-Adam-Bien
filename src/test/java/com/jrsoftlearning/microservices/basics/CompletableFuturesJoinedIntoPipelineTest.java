@@ -3,6 +3,7 @@ package com.jrsoftlearning.microservices.basics;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,8 +30,22 @@ public class CompletableFuturesJoinedIntoPipelineTest {
         first.thenCombine(second, this::combinate)
                 .thenAccept(this::consumeMessage)
                 .get();
-
     }
+
+    @Test
+    public void composingPipelines() {
+        CompletableFuture
+                .supplyAsync(this::message)
+                .thenCompose(this::compose)
+                .thenAccept(this::consumeMessage);
+    }
+
+    CompletionStage<String> compose(String input) {
+        return CompletableFuture
+                .supplyAsync(() -> input)
+                .thenApply(this::beautify);
+    }
+
 
     String greetings() {
         return "good morning";
@@ -47,8 +62,7 @@ public class CompletableFuturesJoinedIntoPipelineTest {
     String beautify(String input) {
         try {
             Thread.sleep(1000);
-        }
-        catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             Logger.getLogger(CompletableFuturesJoinedIntoPipelineTest.class.getName()).log(Level.SEVERE, "");
         }
 
@@ -56,7 +70,7 @@ public class CompletableFuturesJoinedIntoPipelineTest {
     }
 
     void consumeMessage(String message) {
-        System.out.println("message = " + message );
+        System.out.println("message = " + message);
     }
 
     void finalAction() {
