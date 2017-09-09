@@ -3,6 +3,9 @@ package com.jrsoftlearning.microservices.basics;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CompletableFuturesJoinedIntoPipelineTest {
 
@@ -15,13 +18,17 @@ public class CompletableFuturesJoinedIntoPipelineTest {
     }
 
     @Test
-    public void combinePipelines() {
-        CompletableFuture<String> first = CompletableFuture.supplyAsync(this::message);
-        CompletableFuture<String> second = CompletableFuture.supplyAsync(this::greetings);
+    public void combinePipelines() throws ExecutionException, InterruptedException {
+        CompletableFuture<String> first = CompletableFuture
+                .supplyAsync(this::message)
+                .thenApplyAsync(this::beautify);
+        CompletableFuture<String> second = CompletableFuture
+                .supplyAsync(this::greetings)
+                .thenApply(this::beautify);
 
         first.thenCombine(second, this::combinate)
-                .thenApply(this::beautify)
-                .thenAccept(this::consumeMessage);
+                .thenAccept(this::consumeMessage)
+                .get();
 
     }
 
@@ -38,6 +45,13 @@ public class CompletableFuturesJoinedIntoPipelineTest {
     }
 
     String beautify(String input) {
+        try {
+            Thread.sleep(1000);
+        }
+        catch (InterruptedException ex) {
+            Logger.getLogger(CompletableFuturesJoinedIntoPipelineTest.class.getName()).log(Level.SEVERE, "");
+        }
+
         return String.format("+ %s +", input);
     }
 
