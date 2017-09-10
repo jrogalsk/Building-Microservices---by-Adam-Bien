@@ -70,7 +70,14 @@ public class BasicsThreadingTest {
     @Test
     public void backpressure() {
         BlockingQueue<Runnable> queue = new LinkedBlockingDeque<>(2);
-        ThreadPoolExecutor thredPool = new ThreadPoolExecutor(1, 1, 60, TimeUnit.SECONDS, queue, new ThreadPoolExecutor.CallerRunsPolicy());
+
+        ThreadPoolExecutor thredPool = new ThreadPoolExecutor(
+                1,
+                1,
+                60,
+                TimeUnit.SECONDS,
+                queue, this::onOverload
+        );
         long start = System.currentTimeMillis();
         thredPool.submit(this::display);
         duration(start);
@@ -87,6 +94,10 @@ public class BasicsThreadingTest {
 
     public void duration(long start) {
         System.out.println("-- took: " + (System.currentTimeMillis() - start));
+    }
+
+    public void onOverload(Runnable r, ThreadPoolExecutor executor) {
+        System.out.println("-- runnable " + r + " executor " + executor.getActiveCount());
     }
 
     @Test
