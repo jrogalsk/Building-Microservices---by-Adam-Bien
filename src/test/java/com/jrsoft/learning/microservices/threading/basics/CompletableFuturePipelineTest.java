@@ -1,4 +1,4 @@
-package com.jrsoftlearning.microservices.threading.basics;
+package com.jrsoft.learning.microservices.threading.basics;
 
 import org.junit.Before;
 import org.junit.Test;
