@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -29,9 +30,8 @@ public class ClientTest {
                 .thenAccept(this::consume)
                 .get();
     }
-
     private void consume(String message) {
-        System.out.println("message = " + message);
+        this.tut.request().post(Entity.text(message));
     }
 
 }
