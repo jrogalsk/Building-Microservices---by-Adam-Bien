@@ -1,5 +1,6 @@
 package com.jrsoftlearning.microservices.basics;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -8,7 +9,29 @@ import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class CompletableFuturesJoinedIntoPipelineTest {
+public class CompletableFuturePipelineTest {
+
+    @Before
+    public void init() {
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "0"); // <- infinite number of threads will be dedicated for completable future tasks
+    }
+
+    @Test
+    public void forkJoinConfiguration() throws InterruptedException {
+        for (int i = 0; i<200; i++) {
+            CompletableFuture.runAsync(this::slow);
+        }
+
+        Thread.sleep(20000);
+    }
+
+    public void slow() {
+        try {
+            Thread.sleep(20000);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     @Test
     public void pipeline() {
@@ -63,7 +86,7 @@ public class CompletableFuturesJoinedIntoPipelineTest {
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ex) {
-            Logger.getLogger(CompletableFuturesJoinedIntoPipelineTest.class.getName()).log(Level.SEVERE, "");
+            Logger.getLogger(CompletableFuturePipelineTest.class.getName()).log(Level.SEVERE, "");
         }
 
         return String.format("+ %s +", input);
