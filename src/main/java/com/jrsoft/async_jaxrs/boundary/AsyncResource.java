@@ -15,7 +15,7 @@ import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,52 +23,55 @@ import java.util.logging.Logger;
 public class AsyncResource {
 
     @Resource
-    ManagedExecutorService mes;
+    ManagedExecutorService managedThreadPool;
 
     private Client client;
-    private WebTarget tut;
-    private WebTarget processor;
+    private WebTarget messagesMicroService;
+    private WebTarget processorMicroService;
 
     @PostConstruct
     public void init() {
         this.client = ClientBuilder.newClient();
         this.client.property(ClientProperties.CONNECT_TIMEOUT, 1000);
         this.client.property(ClientProperties.READ_TIMEOUT, 5000);
-        this.tut = this.client.target("http://localhost:8080/suplier/resources/messages");
-        this.processor = this.client.target("http://localhost:8080/suplier/resources/processors/beautification");
+        this.messagesMicroService = this.client.target("http://localhost:8080/suplier/resources/messages");
+        this.processorMicroService = this.client.target("http://localhost:8080/suplier/resources/processors/beautification");
     }
 
     @GET
     @Path("orchestration")
-    public String fetchMessage() throws InterruptedException, java.util.concurrent.ExecutionException {
-        Supplier<String> messageSupplier = () -> this.tut.request().get(String.class);
+    public void fetchMessage(@Suspended AsyncResponse response) throws InterruptedException, ExecutionException {
         CompletableFuture
-                .supplyAsync(messageSupplier, mes)
-                .thenApply(this::process)
-                .exceptionally(this::handle)
-                .thenAccept(this::consume)
-                .get();
+                .supplyAsync(this::fetchMessageFromFirsMiscroService, managedThreadPool)
+                .thenApply(this::processTheMessageInAnotherMicroservice)
+                .exceptionally(this::handleExceptions)
+                .thenApply(this::pushTheResultsBackToFirstMicroservice)
+                .thenAccept(response::resume);
 
-        return "+++";
     }
 
-    private String handle(Throwable throwable) {
+    private String fetchMessageFromFirsMiscroService() {
+        return this.messagesMicroService.request().get(String.class);
+    }
+
+    private String handleExceptions(Throwable throwable) {
         return String.format("Sorry we are overloaded: %s", throwable.toString());
     }
 
-    String process(String input) {
-        Response response =  this.processor.request().post(Entity.text(input));
+    String processTheMessageInAnotherMicroservice(String input) {
+        Response response =  this.processorMicroService.request().post(Entity.text(input));
         return response.readEntity(String.class);
     }
 
-    private void consume(String message) {
-        this.tut.request().post(Entity.text(message));
+    private String pushTheResultsBackToFirstMicroservice(String message) {
+        this.messagesMicroService.request().post(Entity.text(message));
+        return message;
     }
 
     @GET
     public void get(@Suspended AsyncResponse response) {
         CompletableFuture
-                .supplyAsync(this::doSomeWork, mes)
+                .supplyAsync(this::doSomeWork, managedThreadPool)
                 .thenAccept(response::resume);
     }
 
