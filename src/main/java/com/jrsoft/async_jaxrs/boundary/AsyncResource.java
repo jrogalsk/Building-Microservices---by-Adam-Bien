@@ -21,9 +21,11 @@ import java.util.logging.Logger;
 
 @Path("async")
 public class AsyncResource {
-
     @Resource
-    ManagedExecutorService managedThreadPool;
+    ManagedExecutorService defaultServerManagedThreadPool; // <- this is a default thread pool
+
+    @Resource(mappedName = "concurent/orchestration") // <- this thread pool was created manually in Payara admin panel
+    ManagedExecutorService orchestrationThreadPool;
 
     private Client client;
     private WebTarget messagesMicroService;
@@ -39,10 +41,17 @@ public class AsyncResource {
     }
 
     @GET
-    @Path("orchestration")
-    public void fetchMessage(@Suspended AsyncResponse response) throws InterruptedException, ExecutionException {
+    public void runCpuConsumingTask(@Suspended AsyncResponse response) {
         CompletableFuture
-                .supplyAsync(this::fetchMessageFromFirsMiscroService, managedThreadPool)
+                .supplyAsync(this::doSomeWork, defaultServerManagedThreadPool)
+                .thenAccept(response::resume);
+    }
+
+    @GET
+    @Path("orchestration")
+    public void orchestrateMicroServices(@Suspended AsyncResponse response) throws InterruptedException, ExecutionException {
+        CompletableFuture
+                .supplyAsync(this::fetchMessageFromFirsMiscroService, orchestrationThreadPool )
                 .thenApply(this::processTheMessageInAnotherMicroservice)
                 .exceptionally(this::handleExceptions)
                 .thenApply(this::pushTheResultsBackToFirstMicroservice)
@@ -66,13 +75,6 @@ public class AsyncResource {
     private String pushTheResultsBackToFirstMicroservice(String message) {
         this.messagesMicroService.request().post(Entity.text(message));
         return message;
-    }
-
-    @GET
-    public void get(@Suspended AsyncResponse response) {
-        CompletableFuture
-                .supplyAsync(this::doSomeWork, managedThreadPool)
-                .thenAccept(response::resume);
     }
 
     String doSomeWork() {
