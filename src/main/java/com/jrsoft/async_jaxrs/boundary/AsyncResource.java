@@ -1,18 +1,26 @@
 package com.jrsoft.async_jaxrs.boundary;
 
+import javax.annotation.Resource;
+import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Path("async")
 public class AsyncResource {
 
+    @Resource
+    ManagedExecutorService mes;
+
     @GET
     public void get(@Suspended AsyncResponse response) {
-        response.resume(this.doSomeWork()); // <- work is no longer managed in HTTP thread pool but in other thread pool, which does not block http calls!
+        CompletableFuture
+                .supplyAsync(this::doSomeWork, mes)
+                .thenAccept(response::resume);
     }
 
     String doSomeWork() {
