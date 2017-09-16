@@ -8,7 +8,8 @@ import javax.ws.rs.Path;
 public class MessagesResource {
 
     @GET
-    public String message() {
+    public String message() throws InterruptedException {
+        Thread.sleep(1000);
         return String.format("Hey Duke %d", System.currentTimeMillis());
     }
 

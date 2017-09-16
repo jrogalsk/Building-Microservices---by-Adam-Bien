@@ -1,5 +1,6 @@
 package com.jrsoft.learning.jaxrs.client;
 
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -10,6 +11,8 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 public class ClientTest {
@@ -21,15 +24,18 @@ public class ClientTest {
     @Before
     public void init() {
         this.client = ClientBuilder.newClient();
+        this.client.property(ClientProperties.CONNECT_TIMEOUT, 100);
+        this.client.property(ClientProperties.READ_TIMEOUT, 500);
         this.tut = this.client.target("http://localhost:8080/suplier/resources/messages");
         this.processor = this.client.target("http://localhost:8080/suplier/resources/processors/beautification");
     }
 
     @Test
     public void fetchMessage() throws ExecutionException, InterruptedException {
+        final ExecutorService pool = Executors.newFixedThreadPool(5);
         Supplier<String>  messageSupplier = () -> this.tut.request().get(String.class);
         CompletableFuture
-                .supplyAsync(messageSupplier)
+                .supplyAsync(messageSupplier, pool)
                 .thenApply(this::process)
                 .thenAccept(this::consume)
                 .get();
