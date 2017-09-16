@@ -10,7 +10,6 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
@@ -31,14 +30,19 @@ public class ClientTest {
     }
 
     @Test
-    public void fetchMessage() throws ExecutionException, InterruptedException {
+    public void fetchMessage() throws InterruptedException, java.util.concurrent.ExecutionException {
         final ExecutorService pool = Executors.newFixedThreadPool(5);
         Supplier<String>  messageSupplier = () -> this.tut.request().get(String.class);
         CompletableFuture
                 .supplyAsync(messageSupplier, pool)
                 .thenApply(this::process)
+                .exceptionally(this::handle)
                 .thenAccept(this::consume)
                 .get();
+    }
+
+    private String handle(Throwable throwable) {
+        return "Sorry we are overloaded";
     }
 
     String process(String input) {
